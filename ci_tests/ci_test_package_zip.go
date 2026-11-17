@@ -299,7 +299,12 @@ func extendBuilderCommand(ctx android.ModuleContext, m android.ModuleProxy, buil
 		}
 
 		f := strings.TrimPrefix(installedFile.String(), productOut+"/")
-		if strings.HasPrefix(f, "out") {
+		// cannon A16: 当 OUT_DIR 位于源码树之外时（如 /cannon/out-a16），
+		// installedFile.String() 为绝对路径，TrimPrefix(productOut) 裁不掉，
+		// 且不再以 "out" 开头，导致 host/中间产物（如 host framework jar）
+		// 被当成相对路径 → validatePathInternal 报 "Path is outside directory"。
+		// 原意是跳过不在 product 分区内的文件，这里补充跳过绝对路径以保持等价语义。
+		if strings.HasPrefix(f, "out") || filepath.IsAbs(f) {
 			continue
 		}
 		if strings.HasPrefix(f, "system/") {
